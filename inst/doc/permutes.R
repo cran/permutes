@@ -30,8 +30,8 @@ perms[perms$p >= .05,c('F','w2')] <- NA
 plot(perms)
 
 ## ----agg-----------------------------------------------------------------
-perms2 <- perms[perms$measure %in% .(Fp1,AF3,F7,F3,FC1,FC5,C3,CP1,CP5,CP6,CP2,C4,FC6,FC2,
-	F4,F8,AF4,Fp2,Fz),]
+perms2 <- perms[perms$measure %in% c('Fp1','AF3','F7','F3','FC1','FC5','C3','CP1',
+	'CP5','CP6','CP2','C4','FC6','FC2','F4','F8','AF4','Fp2','Fz'),]
 perms2$measure <- 'Aggregate'
 perms2 <- aggregate(. ~ measure + time + factor,perms2,mean)
 plot(perms2$time,perms2$p)
@@ -57,8 +57,8 @@ part <- MMN %>%
 		AF3=5,F7=2,F3=4,FC1=3,FC5=1,T7=8,C3=8,CP1=11,CP5=9,P7=10,P3=12,Pz=7,PO3=13,O1=14,
 		Oz=7,O2=6,PO4=5,P4=4,P8=2,CP6=1,CP2=3,C4=8,T8=8,FC6=9,FC2=11,F4=12,F8=10,AF4=13,
 		Fp2=14,Fz=15,Cz=8)) %>%
-	filter(electrode %in% .(Fp1,AF3,F7,F3,FC1,FC5,C3,CP1,CP5,CP6,CP2,C4,FC6,FC2,F4,F8,AF4,
-		Fp2,Fz),complete.cases(.))
+	filter(electrode %in% c('Fp1','AF3','F7','F3','FC1','FC5','C3','CP1','CP5','CP6','CP2',
+		'C4','FC6','FC2','F4','F8','AF4',' Fp2','Fz'), complete.cases(.))
 
 ## ----gam,eval=F----------------------------------------------------------
 #  part$both <- part$dev * part$session #construct interaction term
