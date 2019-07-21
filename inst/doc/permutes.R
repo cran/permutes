@@ -26,7 +26,7 @@ plot(perms)
 
 ## ----es------------------------------------------------------------------
 head(perms) #take a look at the data structure
-perms[perms$p >= .05,c('F','w2')] <- NA
+perms[perms$p >= .05,'F'] <- NA
 plot(perms)
 
 ## ----agg-----------------------------------------------------------------
