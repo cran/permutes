@@ -3,12 +3,14 @@
 \docType{data}
 \name{MMN}
 \alias{MMN}
-\title{EEG data from Jager (in prep.). See the vignette for details.}
-\format{A standard data frame.}
+\title{EEG data from Jager (in prep.). See the vignettes for details.}
+\format{
+A standard data frame.
+}
 \usage{
 data(MMN)
 }
 \description{
-EEG data from Jager (in prep.). See the vignette for details.
+EEG data from Jager (in prep.). See the vignettes for details.
 }
 \keyword{datasets}
