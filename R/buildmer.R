@@ -24,7 +24,7 @@
 #' }
 #' @importFrom stats gaussian
 #' @export
-clusterperm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NULL,series.var,buildmerControl=list(direction='order',crit='LRT',quiet=TRUE,ddf='lme4'),nperm=1000,type='regression',parallel=FALSE,progress='none') {
+clusterperm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NULL,series.var=~0,buildmerControl=list(direction='order',crit='LRT',quiet=TRUE,ddf='lme4'),nperm=1000,type='regression',parallel=FALSE,progress='none') {
 	if (length(type) != 1 || !type %in% c('anova','regression')) {
 		stop("Invalid 'type' argument (specify one of 'anova' or 'regression')")
 	}
@@ -33,15 +33,6 @@ clusterperm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,o
 	} else {
 		pkgcheck(c('buildmer','car','permuco'))
 	}
-
-	# common errors (by me)
-	if (!'formula' %in% class(series.var)) {
-		series.var <- stats::reformulate(series.var)
-	}
-	if (!is.character(progress) && !isTRUE(parallel)) {
-		stop("Invalid 'progress' specified for non-ad-hoc parallel solution (it has to be a character string)")
-	}
-
 	dep <- if ('dep' %in% names(buildmerControl)) buildmerControl$dep else as.character(formula[2])
 	if (all(is.null(weights))) {
 		weights <- rep(1,length(data[[dep]]))
@@ -59,13 +50,21 @@ clusterperm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,o
 	}
 	data$.weights <- weights[ix]
 	data$.offset <- offset[ix]
-	if (length(series.var) != 2) {
-		stop('series.var does not appear to contain exactly one variable')
+	if (!inherits(series.var,'formula')) {
+		series.var <- stats::reformulate(series.var)
 	}
-	series.var <- as.character(series.var[2])
-	timepoints <- data[[series.var]]
-	if (is.null(timepoints)) {
-		stop('series.var ',series.var,' not found in data')
+	series.var <- attr(terms(series.var),'term.labels')
+	has.series <- length(series.var)
+	if (has.series == 0) {
+		timepoints <- rep(0,sum(ix))
+	} else {
+		if (has.series != 1) {
+			stop('series.var does not appear to contain exactly one variable')
+		}
+		timepoints <- data[[series.var]]
+		if (is.null(timepoints)) {
+			stop('series.var ',series.var,' not found in data')
+		}
 	}
 	if (is.character(family)) {
 		family <- get(family)
@@ -73,22 +72,29 @@ clusterperm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,o
 	if (is.function(family)) {
 		family <- family()
 	}
-
 	wrap <- function (t,fun,formula,data,family,timepoints,buildmerControl,nperm,type,verbose) {
 		errfun <- function (e) {
 			# error in permutation-test function, return an empty result for this timepoint
 			warning(e)
-			data.frame(factor=NA,p=NA)
+			data.frame(Factor=NA,p=NA)
 		}
 		ix <- timepoints == t
 		data <- data[ix,]
 		model <- tryCatch(fun(t,formula,data,family,timepoints,buildmerControl,nperm,type,verbose),error=errfun)
 	}
-	if (parallel) {
-		verbose <- progress != 'none'
-		progress <- 'none'
+	if (has.series) {
+		if (isTRUE(parallel)) {
+			verbose <- progress != 'none'
+			progress <- 'none'
+		} else {
+			if (!is.character(progress)) {
+				stop("Invalid 'progress' specified for non-ad-hoc parallel solution (it has to be a character string)")
+			}
+			verbose <- FALSE
+		}
 	} else {
-		verbose <- FALSE
+		verbose <- if (is.logical(progress)) progress else progress != 'none'
+		progress <- 'none'
 	}
 	results <- plyr::alply(sort(unique(timepoints)),1,wrap,fit.buildmer,formula,data,family,timepoints,buildmerControl,nperm,type,verbose,.parallel=parallel,.progress=progress,.inform=FALSE)
 	terms <- lapply(results,`[[`,'terms')
@@ -101,21 +107,25 @@ clusterperm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,o
 
 	df$p <- df$cluster_mass <- df$cluster <- NA
 	# We need to invert the double-nested list from perm$time$factor to perm$factor$time
-	for (x in unique(df$factor)) {
+	for (x in unique(df$Factor)) {
 		this.factor <- lapply(perms,`[[`,x) #all timepoints for this one factor
 		df.LRT <- max(sapply(this.factor,function (x) x$df),na.rm=TRUE) #these will all be the same (because they are the same model comparison and these are ndf), except possibly in cases of rank-deficiency, hence why max is correct
 		thresh <- stats::qchisq(.95,df.LRT)
 		samp   <- sapply(this.factor,function (x) c(x$LRT,x$perms)) #columns are time, rows are samples
 		p      <- apply(samp,2,function (x) sum(x[-1] >= x[1],na.rm=TRUE) / sum(!is.na(x)))
-		stat   <- permuco::compute_clustermass(samp,thresh,sum,'greater')$main
-		df[df$factor == x,c('p','cluster_mass','p.cluster_mass','cluster')] <- c(p,stat)
+		stat   <- if (has.series) permuco::compute_clustermass(samp,thresh,sum,'greater')$main else NA
+		df[df$Factor == x,c('p','cluster_mass','p.cluster_mass','cluster')] <- c(p,stat)
 	}
 
-	df <- cbind(df[,1],measure=as.character(dep),df[,-1])
-	colnames(df)[1] <- series.var
+	if (has.series) {
+		df <- cbind(df[,1],Measure=as.character(dep),df[,-1])
+		colnames(df)[1] <- series.var
+	} else {
+		df[,1] <- df$cluster <- df$cluster_mass <- df$p.cluster_mass <- NULL
+	}
 	attr(df,'permutations') <- results
 	class(df) <- c('permutes','data.frame')
-	df
+	return(df)
 }
 
 fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm,type,verbose) {
@@ -162,8 +172,13 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 		terms <- stats::setNames(,formula$term[fixed])
 	}
 
-	.weights <- data$.weights; .offset <- data$.offset #silence R CMD check warning
-	bm <- buildmer::buildmer(formula=formula,data=data,family=family,buildmerControl=buildmerControl,weights=.weights,offset=.offset)
+	.weights <- data$.weights; .offset <- data$.offset #silence R CMD check warning; also necessary for buildmer =2.0, which did not support NSE for these
+	if (utils::packageVersion('buildmer') < '2.0') {
+		bm <- buildmer::buildmer(formula=formula,data=data,family=family,buildmerControl=buildmerControl,weights=.weights,offset=.offset)
+	} else {
+		buildmerControl$args <- c(buildmerControl$args,list(weights=.weights,offset=.offset))
+		bm <- buildmer::buildmer(formula=formula,data=data,family=family,buildmerControl=buildmerControl)
+	}
 	perms <- lapply(terms,function (term) {
 		if (verbose) {
 			time <- Sys.time()
@@ -174,7 +189,7 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 		# 1. Get the marginal errors calculated by the alternative model
 		# 2. To account for these errors' non-independence: weight the errors by the inverse of the random-effects correlation matrix
 			# V0 = sigma^2_b_1_0 * ZtZ + sigma^2_e_0I
-		# 3. Weigh by Ut0^-1, where U0 = chol(V0)
+		# 3. Weight by Ut0^-1, where U0 = chol(V0)
 			# lme4 parameterizes sigma^2_b_1_0 Z = Z Lambda_theta and we really want their transpose
 		# 4. Permute the unweighted errors, then reweight the permuted data
 		# 5. Reestimate *both* models with the fixed effects removed, which is necessary if any random effects happened to be similar
@@ -260,6 +275,8 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 		list(perms=perms,LRT=LRT,df=df)
 	})
 	LRT <- sapply(perms,`[[`,'LRT')
+	scale.est <- !family(bm@model)$family %in% c('binomial','poisson')
+	is.mer <- inherits(bm@model,'merMod')
 	if (type == 'regression') {
 		se <- sqrt(diag(as.matrix(stats::vcov(bm@model)))) #as.matrix needed to work around 'Error in diag(vcov(bm@model)) : long vectors not supported yet: array.c:2186'
 		if (inherits(bm@model,'merMod')) {
@@ -275,8 +292,8 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 		} else {
 			beta <- stats::coef(bm@model)
 		}
-		tname <- if (bm@p$is.gaussian) 't' else 'z'
-		df <- data.frame(factor=unname(terms),LRT=unname(LRT),beta=unname(beta),t=unname(beta/se))
+		tname <- if (scale.est) 't' else 'z'
+		df <- data.frame(Factor=unname(terms),LRT=unname(LRT),beta=unname(beta),t=unname(beta/se))
 		colnames(df)[4] <- tname
 		list(terms=terms,perms=perms,df=df)
 	} else {
@@ -284,139 +301,45 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 			anovatab <- stats::anova(bm@model) #is Type III
 			Fvals <- anovatab$pTerms.chi.sq / anovatab$pTerms.df
 			Fname <- 'F'
+			df <- anovatab$pTerms.df
+			# gam anova removes the intercept; restore it if needed
+			if (names(terms)[1] == '1') {
+				Fval1 <- anovatab$p.t['(Intercept)']^2
+				Fvals <- c(Fval1,Fvals)
+				df <- c(1,df)
+				names(Fvals) <- c('1',rownames(anovatab$pTerms.table))
+			}
 		} else {
-			test <- if (inherits(bm@model,'glm')) 'Wald' else 'Chisq'
-			anovatab <- car::Anova(bm@model,type=3,test=test)
-			if (inherits(bm@model,'merMod') || inherits(bm@model,'glm')) {
-				Fvals <- anovatab$Chisq
-				Fname <- 'Chisq'
-				if (inherits(bm@model,'lmerMod')) {
-					Fvals <- Fvals / anovatab$Df
+			if (is.mer) {
+				anovatab <- car::Anova(bm@model,type=3,test='Chisq')
+				if (scale.est) {
+					Fvals <- anovatab$Chisq / anovatab$Df
 					Fname <- 'F'
+				} else {
+					Fvals <- anovatab$Chisq
+					Fname <- 'Chisq'
 				}
 			} else {
-				Fvals <- anovatab$'F value'
-				Fname <- 'F'
+				if (scale.est) {
+					anovatab <- car::Anova(bm@model,type=3,test='F')
+					Fvals <- anovatab$F
+					Fname <- 'F'
+				} else {
+					anovatab <- car::Anova(bm@model,type=3,test='Wald')
+					Fvals <- anovatab$Chisq
+					Fname <- 'Chisq'
+				}
 			}
+			df <- anovatab$Df
+			names(Fvals) <- rownames(anovatab)
 		}
-		names(Fvals) <- rownames(anovatab)
 		if (length(Fvals) < length(terms)) { #rank-deficiency
 			missing <- setdiff(names(terms),names(Fvals))
 			Fvals[missing] <- NA
 			Fvals <- Fvals[names(terms)]
 		}
-		df <- data.frame(factor=unname(terms),LRT=unname(LRT),F=unname(Fvals))
-		colnames(df)[3] <- Fname
+		df <- data.frame(Factor=unname(terms),df=df,LRT=unname(LRT),F=unname(Fvals))
+		colnames(df)[4] <- Fname
 		list(terms=terms,perms=perms,df=df)
 	}
-}
-
-#' A general permutation test for mixed-effects models or other \code{buildmer} models.
-#' @param formula A normal formula, possibly using \code{lme4}-style random effects. This can also be a buildmer terms object, provided \code{dep} is passed in \code{buildmerControl}. Only a single response variable is supported. For binomial models, the \code{cbind} syntax is not supported; please convert your dependent variable to a proportion and use weights instead.
-#' @param family The family.
-#' @param data The data.
-#' @template weightsoffset
-#' @template buildmer1
-#' @param progress Logical indicating whether to print progress messages during the permutation testing.
-#' @template buildmer2
-#' @examples
-#' \donttest{
-#' # Testing a single EEG electrode, with random effects by participants
-#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN)
-#' # Testing a single EEG electrode, with random effects by participants, ANOVA inference
-#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN,type='anova')
-#' }
-#' \dontshow{
-#' perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')
-#' perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='regression')
-#' perms <- perm.lmer(Fz ~ Session + (1|Subject),data=within(MMN[MMN$Time > 200 & MMN$Time < 205,],{Session <- factor(Session)}),nperm=2,type='regression')
-#' }
-#' @importFrom stats gaussian
-#' @export
-perm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NULL,buildmerControl=list(direction='order',crit='LRT',quiet=TRUE,ddf='lme4'),nperm=1000,type='regression',progress=TRUE) {
-	if (length(type) != 1 || !type %in% c('anova','regression')) {
-		stop("Invalid 'type' argument (specify one of 'anova' or 'regression')")
-	}
-	if (type == 'regression') {
-		pkgcheck('buildmer')
-	} else {
-		pkgcheck(c('buildmer','car'))
-	}
-
-	dep <- if ('dep' %in% names(buildmerControl)) buildmerControl$dep else as.character(formula[2])
-	if (dep %in% names(data)) {
-		ix <- !is.na(data[[dep]])
-		data <- data[ix,]
-		if (length(weights) == length(ix)) {
-			data$.weights <- weights[ix]
-		} else if (all(is.null(weights))) {
-			data$.weights <- rep(1,length(ix))
-		} else {
-			stop('Weights have been provided, but are not of the same length as the data')
-		}
-		if (length(offset) == length(ix)) {
-			data$.offset <- offset[ix]
-		} else if (all(is.null(offset))) {
-			data$.offset <- rep(0,length(ix))
-		} else {
-			stop('Offsets have been provided, but are not of the same length as the data')
-		}
-	} else {
-		warning('Unable to find the dependent variable ',dep,' in the data. Missing values will not be dropped automatically and will break weights/offset handling.')
-	}
-	if (is.character(family)) {
-		family <- get(family)
-	}
-	if (is.function(family)) {
-		family <- family()
-	}
-
-	bm <- buildmer::buildmer(formula=formula,data=data,family=family,buildmerControl=buildmerControl)
-	bm@anova <- bm@summary <- NULL
-	formula <- formula(bm@model) #in case of rank-deficiency
-	perm <- fit.buildmer(1,formula,data,family,1,buildmerControl,nperm,type,progress)
-
-	LRTs  <- sapply(perm$perms,function (x) x$LRT)
-	pvals <- sapply(seq_along(LRTs),function (i) mean(perm$perms[[i]]$perms > LRTs[i]))
-	if (type == 'anova') {
-		if (inherits(bm@model,'gam')) {
-			# will happen if no random effects but REML=TRUE
-			bm@anova <- stats::anova(bm@model)
-			bm@anova$pTerms.table[,'p-value'] <- pvals
-		} else {
-			test <- if (inherits(bm@model,'glm')) 'Wald' else 'Chisq'
-			bm@anova <- car::Anova(bm@model,type=3,test=test)
-			if (inherits(bm@model,'merMod') || inherits(bm,'glm')) {
-				if (inherits(bm@model,'lmerMod')) {
-					factors <- rownames(bm@anova)
-					bm@anova <- data.frame('F value'=bm@anova$Chisq/bm@anova$Df,'Df'=bm@anova$Df,'Pr(>F)'=pvals)
-					rownames(bm@anova) <- factors
-					attr(bm@anova,'heading') <- 'ANOVA table (Type III sums of squares) with permutation p-values'
-					class(bm@anova) <- c('anova','data.frame')
-				} else {
-					attr(bm@anova,'heading') <- 'Analysis-of-Deviance table (Type III sums of squares) with permutation p-values'
-					bm@anova$'Pr(>Chisq)' <- pvals
-				}
-			} else {
-				attr(bm@anova,'heading') <- 'ANOVA table (Type III sums of squares) with permutation p-values'
-				bm@anova$'Pr(>F)' <- pvals
-			}
-		}
-	} else {
-		bm@summary <- if (inherits(bm@model,'lmerModLmerTest')) summary(bm@model,ddf='lme4') else summary(bm@model)
-		if (inherits(bm@model,'glmerMod')) {
-			bm@summary$coefficients <- cbind(bm@summary$coefficients,'Pr(>|z|)'=pvals)
-		} else if (inherits(bm@model,'lmerMod')) {
-			bm@summary$coefficients <- cbind(bm@summary$coefficients,'Pr(>|t|)'=pvals)
-		} else if (inherits(bm@model,'gam')) {
-			bm@summary$p.table[,'Pr(>|t|)'] <- pvals
-		} else if (inherits(bm@model,'glm')) {
-			bm@summary$coefficients[,'Pr(>|z|)'] <- pvals
-		} else {
-			bm@summary$coefficients[,'Pr(>|t|)'] <- pvals
-		}
-	}
-
-	attr(bm,'perms') <- perm$perms
-	bm
 }

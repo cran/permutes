@@ -31,7 +31,7 @@ clusterperm.lm <- function (formula,data=NULL,family=gaussian(),weights=NULL,off
 	mc <- match.call()
 	e <- parent.frame()
 	mc[[1]] <- clusterperm.lmer
-	eval(mc,e)
+	return(eval(mc,e))
 }
 
 #' Cluster-based permutation tests for time series data, based on generalized linear mixed-effects models or other \code{buildmer} models. This is an alias for \code{clusterperm.lmer} provided for discoverability.
@@ -60,6 +60,36 @@ clusterperm.glmer <- function (...) clusterperm.lmer(...)
 #' @seealso clusterperm.lm, clusterperm.lmer
 #' @export
 clusterperm.glm <- function (...) clusterperm.lm(...)
+
+#' A general permutation test for mixed-effects models or other \code{buildmer} models.
+#' @param formula A normal formula, possibly using \code{lme4}-style random effects. This can also be a buildmer terms object, provided \code{dep} is passed in \code{buildmerControl}. Only a single response variable is supported. For binomial models, the \code{cbind} syntax is not supported; please convert your dependent variable to a proportion and use weights instead.
+#' @param family The family.
+#' @param data The data.
+#' @template weightsoffset
+#' @template buildmer1
+#' @param progress Logical indicating whether to print progress messages during the permutation testing.
+#' @template buildmer2
+#' @examples
+#' \donttest{
+#' # Testing a single EEG electrode, with random effects by participants
+#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN)
+#' # Testing a single EEG electrode, with random effects by participants, ANOVA inference
+#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN,type='anova')
+#' }
+#' \dontshow{
+#' perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')
+#' perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='regression')
+#' perms <- perm.lmer(Fz ~ Session + (1|Subject),data=within(MMN[MMN$Time > 200 & MMN$Time < 205,],{Session <- factor(Session)}),nperm=2,type='regression')
+#' }
+#' @importFrom stats gaussian
+#' @export
+perm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NULL,buildmerControl=list(direction='order',crit='LRT',quiet=TRUE,ddf='lme4'),nperm=1000,type='regression',progress=TRUE) {
+	mc <- match.call()
+	e <- parent.frame()
+	mc[[1]] <- clusterperm.lmer
+	mc$series.var <- ~0
+	return(eval(mc,e))
+}
 
 #' A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{clusterperm.lmer}, except that random effects are explicily disallowed.
 #' @param formula A normal formula, possibly using \code{lme4}-style random effects. This can also be a buildmer terms object, provided \code{dep} is passed in \code{buildmerControl}. Only a single response variable is supported. For binomial models, the \code{cbind} syntax is not supported; please convert your dependent variable to a proportion and use weights instead.
@@ -100,7 +130,7 @@ perm.lm <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NUL
 	mc <- match.call()
 	e <- parent.frame()
 	mc[[1]] <- perm.lmer
-	eval(mc,e)
+	return(eval(mc,e))
 }
 
 #' A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{perm.lmer} provided for discoverability.
@@ -119,7 +149,7 @@ perm.lm <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NUL
 #' }
 #' @seealso perm.lmer
 #' @export
-perm.glmer <- function (...) perm.lmer(...)
+perm.glmer <- function (...) return(perm.lmer(...))
 
 #' A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{perm.lm} provided for discoverability.
 #' @param ... Arguments to be passed to \code{perm.lm}.
@@ -128,4 +158,4 @@ perm.glmer <- function (...) perm.lmer(...)
 #' \dontshow{perms <- perm.glm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2)}
 #' @seealso perm.lm, perm.lmer
 #' @export
-perm.glm <- function (...) perm.lm(...)
+perm.glm <- function (...) return(perm.lm(...))
