@@ -37,10 +37,15 @@ print(unique(MMN$Time)[c(78,141)])
 plot(perms,type='cluster_mass',sig='p.cluster_mass')
 
 ## ----lmer---------------------------------------------------------------------
+library(buildmer)
 data <- MMN[MMN$Time > 151 & MMN$Time < 275,]
 data <- aggregate(Fz ~ Deviant + Session + Subject,data,mean)
-model <- perm.lmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data)
+lmm <- buildmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data,
+                buildmerControl=list(direction='order'))
+
+## ----plmer--------------------------------------------------------------------
+perm <- perm.lmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data)
 
 ## ----summary------------------------------------------------------------------
-print(summary(model))
+print(perm)
 

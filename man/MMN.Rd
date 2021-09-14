@@ -3,7 +3,7 @@
 \docType{data}
 \name{MMN}
 \alias{MMN}
-\title{EEG data from Jager (in prep.). See the vignettes for details.}
+\title{ERP data from Jager (in prep.). See the vignettes for details.}
 \format{
 A standard data frame.
 }
@@ -11,6 +11,6 @@ A standard data frame.
 data(MMN)
 }
 \description{
-EEG data from Jager (in prep.). See the vignettes for details.
+ERP data from Jager (in prep.). See the vignettes for details.
 }
 \keyword{datasets}

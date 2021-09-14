@@ -1,7 +1,7 @@
 ---
 title: "Analyzing time series data using `clusterperm.lmer`"
 author: "Cesko C.\ Voeten"
-date: "26 April 2021"
+date: "14 September 2021"
 bibliography: bibliography.bib
 csl: apa.csl
 output: pdf_document
@@ -11,7 +11,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This vignette models EEG data, an example of _time series data_, using permutation testing. The `permutes` package implements two approaches, one based on package `lmPerm`, which is shown in the other vignette, and the other based on package `buildmer`, which is shown here. The `lmPerm` approach can do multivariate responses, but cannot run generalized linear models and only has very limited support for random effects (i.e.:\ the `Error()` functionality works to run ANOVA with random effects, but only using Type II SS). The `buildmer` approach can fit any model that function `buildmer` from package `buildmer` can (i.e.:\ `lm`, `glm`, `lmer`, and `glmer` models), but cannot fit multiple responses. Also, the `buildmer` approach can use the cluster-mass test by @marisoostenveld, using the relevant machinery in package `permuco`.
+This vignette models ERP data, an example of _time series data_, using permutation testing. The `permutes` package implements two approaches, one based on package `lmPerm`, which is shown in the other vignette, and the other based on package `buildmer`, which is shown here. The `lmPerm` approach can do multivariate responses, but cannot run generalized linear models and only has very limited support for random effects (i.e.:\ the `Error()` functionality works to run ANOVA with random effects, but only using Type II SS). The `buildmer` approach can fit any model that function `buildmer` from package `buildmer` can (i.e.:\ `lm`, `glm`, `lmer`, and `glmer` models), but cannot fit multiple responses. Also, the `buildmer` approach can use the cluster-mass test by @marisoostenveld, using the relevant machinery in package `permuco`.
 
 ## Sample data
 
@@ -28,11 +28,11 @@ length(unique(MMN$Time)) #how many timepoints?
 
 The first 30 columns are the 30 sampled EEG electrodes. The `Time` column denotes the moment from stimulus onset, in milliseconds, of each measurement type. `Subject` is the participant, and `Session` is the session of the experiment minus one, to make it a proper dummy indicating whether the datapoint is from the first (0) or the second session (1). Finally, `Deviant` is a dummy indicating whether the stimulus was a standard (0) or a deviant (1), explained in the next paragraph. Note that, contrary to the results and recommendations in @brysbaert, @jager averaged over all her items belonging to the same condition in this experiment.
 
-Time series data such as these are special because the data consist of multiple, _strongly correlated_, measurements of the same signal. This generates two problems. The first is a research problem: which portion of this time series do we want to analyze? The `permutes` package was designed to help researchers answer precisely this question. The second problem is of a statistical nature: how do we handle the strong autocorrelation present throughout this sampled window? Note that in the case of EEG data, these same two problems are additionally encountered in the _spatial_ domain: what combination of electrodes ('region of interest') do we want to analyze, and how do we deal with the spatial correlation present in data measured from neighboring sites? However, in the case of the mismatch-negativity component, we have _a priori_ reason to assume that it will be reflected most strongly in the `Fz` electrode. We will therefore only consider this electrode; for an analysis that includes all electrodes, see the other vignette.
+Time series data such as these are special because the data consist of multiple, _strongly correlated_, measurements of the same signal. This generates two problems. The first is a research problem: which portion of this time series do we want to analyze? The `permutes` package was designed to help researchers answer precisely this question. The second problem is of a statistical nature: how do we handle the strong autocorrelation present throughout this sampled window? Note that in the case of ERP data, these same two problems are additionally encountered in the _spatial_ domain: what combination of electrodes ('region of interest') do we want to analyze, and how do we deal with the spatial correlation present in data measured from neighboring sites? However, in the case of the mismatch-negativity component, we have _a priori_ reason to assume that it will be reflected most strongly in the `Fz` electrode. We will therefore only consider this electrode; for an analysis that includes all electrodes, see the other vignette.
 
 ## Determining the window
 
-The problem we face equates to what is known in the EEG literature as determining the _window_. The normal way to do this is to run a regression analysis on every individual timepoint, and take as the window the point where a large sequence of significant $p$-values occurs. If we plot time horizontally and $p$-value vertically, we can use this approach to select a time window.
+The problem we face equates to what is known in the ERP literature as determining the _window_. The normal way to do this is to run a regression analysis on every individual timepoint, and take as the window the point where a large sequence of significant $p$-values occurs. If we plot time horizontally and $p$-value vertically, we can use this approach to select a time window.
 
 It should be noted that this approach suffers from an extreme multiple-comparisons problem: we will be running 231 regressions! When compared to an asymptotic null distribution, the $p$-values will be spuriously significant in, expectedly, 12 random combinations. The permutation testing approach to time series data helps with this problem by _inferring_ the null distribution from randomly perturbed data. When including random effects, this is slightly complicated; `clusterperm.lmer` uses a simplified version of the algorithm by @leebraun for this.
 
@@ -94,19 +94,29 @@ This confirms significance for the chosen factor in the chosen window, as well a
 
 Alternatively, we can use an approach more common in psycholinguistics, which is to use the found window as input for our _actual_ analysis, which can be a linear mixed-effects model. We will average our data along the aforementioned window, and then run a _permutation linear mixed-effects model_ to analyze the data, so that we can easily obtain robust $p$-values. The advantage of these permutation $p$-values is, again, that we could run multiple such models without requiring any Bonferroni correction. For the present single model, however, an ordinary linear mixed-effects model would also suffice.
 
+Previous versions of `permutes` produced `(g)lm`, `gam`, or `(g)lmer` objects here; the current version does not, instead producing the same output as the other permutation functions. For this reason, it is recommended to start by fitting a linear mixed model, and to then compute the permutation $p$-values separately. The linear mixed model can be fitted as follows:
+
 ```{r lmer}
+library(buildmer)
 data <- MMN[MMN$Time > 151 & MMN$Time < 275,]
 data <- aggregate(Fz ~ Deviant + Session + Subject,data,mean)
-model <- perm.lmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data)
+lmm <- buildmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data,
+                buildmerControl=list(direction='order'))
 ```
 
-Finally, we look at the resulting summary:
+From the above, we observe that the highest random-effects structure that this model could support was `(1 + Deviant | Subject)`. Given that the data only contain 95 observations---due to Jager's averaging over items---this is not surprising. Keeping this in mind, we can use function `perm.lmer` to obtain the corresponding permutation $p$-values:
+
+```{r plmer}
+perm <- perm.lmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data)
+```
+
+It does not matter here whether we specify `(Deviant + Session | Subject)` or only `(Deviant | Subject)`; the permutation tests are based on the maximal _feasible_ model in any case. The permutation $p$-values (and corresponding regression coefficients) are provided as a simple dataframe, which we can print:
 
 ```{r summary}
-print(summary(model))
+print(perm)
 ```
 
-We first observe that the highest random-effects structure that this model could support was `(1 + Deviant | Subject)`. Given that the data only contain 95 observations---due to Jager's averaging over items---this is not surprising. The main conclusions to be drawn from these results is that there is a significant mismatch negativity of $-1.91$ microvolts. No evidence is found for a change in this MMN over the two sessions of the experiment.
+The main conclusion to be drawn from these results is that there is a significant mismatch negativity of $-1.91$ microvolts. No evidence is found for a change in this MMN over the two sessions of the experiment.
 
 This concludes our expository foray into these data.
 

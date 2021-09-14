@@ -218,7 +218,7 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 			X <- X[,colnames(X) == '(Intercept)']
 		} else {
 			# If it's not the intercept, things are more complicated: we need to figure out the name in the model matrix
-			# Keep in the intercept because otherwise model.matrix() will not process factor levels
+			# Keep the intercept in because otherwise model.matrix() will not process factor levels
 			tab.restricted <- formula[formula$term %in% c('1',term) & is.na(formula$grouping),]
 			formula.restricted <- buildmer::build.formula(NULL,tab.restricted)
 			X.restricted <- stats::model.matrix(formula.restricted,data)
@@ -308,6 +308,8 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 				Fvals <- c(Fval1,Fvals)
 				df <- c(1,df)
 				names(Fvals) <- c('1',rownames(anovatab$pTerms.table))
+			} else {
+				names(Fvals) <- rownames(anovatab$pTerms.table)
 			}
 		} else {
 			if (is.mer) {
