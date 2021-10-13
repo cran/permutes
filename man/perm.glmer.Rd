@@ -15,9 +15,11 @@ A general permutation test for mixed-effects models or other \code{buildmer} mod
 \examples{
 \donttest{
 # Testing a single EEG electrode, with random effects by participants
-perms <- perm.glmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN)
+perms <- perm.glmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),
+                    data=MMN[MMN$Time > 150 & MMN$Time < 250,])
 # Testing a single EEG electrode, with random effects by participants, ANOVA inference
-perms <- perm.glmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN,type='anova')
+perms <- perm.glmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),
+                    data=MMN[MMN$Time > 150 & MMN$Time < 250,],type='anova')
 }
 \dontshow{
 perms <- perm.glmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')

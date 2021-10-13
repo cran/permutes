@@ -50,9 +50,11 @@ The returned object provides the raw bootstrap samples in the \code{pb} attribut
 \examples{
 \donttest{
 # Testing a single EEG electrode, with random effects by participants
-perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN)
+perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),
+                   data=MMN[MMN$Time > 150 & MMN$Time < 250,])
 # Testing a single EEG electrode, with random effects by participants, ANOVA inference
-perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN,type='anova')
+perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),
+                   data=MMN[MMN$Time > 150 & MMN$Time < 250,],type='anova')
 }
 \dontshow{
 perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')

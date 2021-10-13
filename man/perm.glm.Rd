@@ -13,7 +13,7 @@ perm.glm(...)
 A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{perm.lm} provided for discoverability.
 }
 \examples{
-\donttest{perms <- perm.glm(Fz ~ Deviant * Session,data=MMN)}
+\donttest{perms <- perm.glm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 150 & MMN$Time < 250,])}
 \dontshow{perms <- perm.glm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2)}
 }
 \seealso{

@@ -218,15 +218,13 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 			X <- X[,colnames(X) == '(Intercept)']
 		} else {
 			# If it's not the intercept, things are more complicated: we need to figure out the name in the model matrix
-			# Keep the intercept in because otherwise model.matrix() will not process factor levels
-			tab.restricted <- formula[formula$term %in% c('1',term) & is.na(formula$grouping),]
+			tab.full <- formula[is.na(formula$grouping),]
+			formula.full <- buildmer::build.formula(NULL,tab.full)
+			X.full <- stats::model.matrix(formula.full,data)
+			tab.restricted <- formula[formula$term != term & is.na(formula$grouping),]
 			formula.restricted <- buildmer::build.formula(NULL,tab.restricted)
 			X.restricted <- stats::model.matrix(formula.restricted,data)
-			if ('1' %in% tab.restricted$term) {
-				# Now we drop the intercept again, and we will only be left with the focal effect
-				X.restricted <- X.restricted[,-1,drop=FALSE]
-			}
-			if (!NCOL(X.restricted)) {
+			if (!(NCOL(X.full) > NCOL(X.restricted))) {
 				return(list(perms=0*1:nperm,LRT=0,df=0))
 			}
 			normalized.colnames <- function (X) { #because interaction terms may have been wickedly reordered between colnames(X) and colnames(X.restricted)
@@ -234,7 +232,8 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 				norm <- lapply(split,sort)
 				sapply(norm,paste0,collapse=':')
 			}
-			want <- normalized.colnames(X) %in% normalized.colnames(X.restricted)
+			stopifnot(all(normalized.colnames(X.restricted) %in% normalized.colnames(X)))
+			want <- !normalized.colnames(X) %in% normalized.colnames(X.restricted)
 			X[,!want] <- 0
 			e <- stats::resid(bm@model) + X %*% B
 			X <- X[,want]
@@ -330,6 +329,10 @@ fit.buildmer <- function (t,formula,data,family,timepoints,buildmerControl,nperm
 					anovatab <- car::Anova(bm@model,type=3,test='Wald')
 					Fvals <- anovatab$Chisq
 					Fname <- 'Chisq'
+				}
+				if (rownames(anovatab)[nr <- length(Fvals)] == 'Residuals') {
+					anovatab <- anovatab[-nr,]
+					Fvals <- Fvals[-nr]
 				}
 			}
 			df <- anovatab$Df

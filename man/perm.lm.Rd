@@ -2,7 +2,7 @@
 % Please edit documentation in R/discoverability.R
 \name{perm.lm}
 \alias{perm.lm}
-\title{A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{clusterperm.lmer}, except that random effects are explicily disallowed.}
+\title{A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{perm.lmer}, except that random effects are explicily disallowed.}
 \usage{
 perm.lm(
   formula,
@@ -39,7 +39,7 @@ perm.lm(
 A data frame.
 }
 \description{
-A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{clusterperm.lmer}, except that random effects are explicily disallowed.
+A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{perm.lmer}, except that random effects are explicily disallowed.
 }
 \details{
 If not explicitly overridden in the \code{buildmerControl} argument, the function changes a few buildmer defaults to make more sense for permutation testing. This includes setting \code{direction='order'} and \code{quiet=TRUE}. Set these options explicitly to override this behavior.
@@ -50,13 +50,13 @@ The returned object provides the raw bootstrap samples in the \code{pb} attribut
 \examples{
 \donttest{
 # Testing a single EEG electrode, with random effects by participants
-perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN)
+perms <- perm.lm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 150 & MMN$Time < 250,])
 # Testing a single EEG electrode, with random effects by participants, ANOVA inference
-perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN,type='anova')
+perms <- perm.lm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 150 & MMN$Time < 250,],type='anova')
 }
 \dontshow{
-perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')
-perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='regression')
-perms <- perm.lmer(Fz ~ Session + (1|Subject),data=within(MMN[MMN$Time > 200 & MMN$Time < 205,],{Session <- factor(Session)}),nperm=2,type='regression')
+perms <- perm.lm(Fz ~ Deviant*Session,data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')
+perms <- perm.lm(Fz ~ Deviant*Session,data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='regression')
+perms <- perm.lm(Fz ~ Session,data=within(MMN[MMN$Time > 200 & MMN$Time < 205,],{Session <- factor(Session)}),nperm=2,type='regression')
 }
 }

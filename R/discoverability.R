@@ -72,9 +72,11 @@ clusterperm.glm <- function (...) clusterperm.lm(...)
 #' @examples
 #' \donttest{
 #' # Testing a single EEG electrode, with random effects by participants
-#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN)
+#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),
+#'                    data=MMN[MMN$Time > 150 & MMN$Time < 250,])
 #' # Testing a single EEG electrode, with random effects by participants, ANOVA inference
-#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN,type='anova')
+#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),
+#'                    data=MMN[MMN$Time > 150 & MMN$Time < 250,],type='anova')
 #' }
 #' \dontshow{
 #' perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')
@@ -91,7 +93,7 @@ perm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=N
 	return(eval(mc,e))
 }
 
-#' A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{clusterperm.lmer}, except that random effects are explicily disallowed.
+#' A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{perm.lmer}, except that random effects are explicily disallowed.
 #' @param formula A normal formula, possibly using \code{lme4}-style random effects. This can also be a buildmer terms object, provided \code{dep} is passed in \code{buildmerControl}. Only a single response variable is supported. For binomial models, the \code{cbind} syntax is not supported; please convert your dependent variable to a proportion and use weights instead.
 #' @param family The family.
 #' @param data The data.
@@ -102,14 +104,14 @@ perm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=N
 #' @examples
 #' \donttest{
 #' # Testing a single EEG electrode, with random effects by participants
-#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN)
+#' perms <- perm.lm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 150 & MMN$Time < 250,])
 #' # Testing a single EEG electrode, with random effects by participants, ANOVA inference
-#' perms <- perm.lmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN,type='anova')
+#' perms <- perm.lm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 150 & MMN$Time < 250,],type='anova')
 #' }
 #' \dontshow{
-#' perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')
-#' perms <- perm.lmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='regression')
-#' perms <- perm.lmer(Fz ~ Session + (1|Subject),data=within(MMN[MMN$Time > 200 & MMN$Time < 205,],{Session <- factor(Session)}),nperm=2,type='regression')
+#' perms <- perm.lm(Fz ~ Deviant*Session,data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')
+#' perms <- perm.lm(Fz ~ Deviant*Session,data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='regression')
+#' perms <- perm.lm(Fz ~ Session,data=within(MMN[MMN$Time > 200 & MMN$Time < 205,],{Session <- factor(Session)}),nperm=2,type='regression')
 #' }
 #' @importFrom stats gaussian
 #' @export
@@ -138,9 +140,11 @@ perm.lm <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NUL
 #' @examples
 #' \donttest{
 #' # Testing a single EEG electrode, with random effects by participants
-#' perms <- perm.glmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN)
+#' perms <- perm.glmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),
+#'                     data=MMN[MMN$Time > 150 & MMN$Time < 250,])
 #' # Testing a single EEG electrode, with random effects by participants, ANOVA inference
-#' perms <- perm.glmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),data=MMN,type='anova')
+#' perms <- perm.glmer(Fz ~ Deviant * Session + (Deviant * Session | Subject),
+#'                     data=MMN[MMN$Time > 150 & MMN$Time < 250,],type='anova')
 #' }
 #' \dontshow{
 #' perms <- perm.glmer(Fz ~ Deviant*Session + (1|Subject),data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2,type='anova')
@@ -154,7 +158,7 @@ perm.glmer <- function (...) return(perm.lmer(...))
 #' A general permutation test for mixed-effects models or other \code{buildmer} models. This is an alias for \code{perm.lm} provided for discoverability.
 #' @param ... Arguments to be passed to \code{perm.lm}.
 #' @examples
-#' \donttest{perms <- perm.glm(Fz ~ Deviant * Session,data=MMN)}
+#' \donttest{perms <- perm.glm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 150 & MMN$Time < 250,])}
 #' \dontshow{perms <- perm.glm(Fz ~ Deviant * Session,data=MMN[MMN$Time > 200 & MMN$Time < 205,],nperm=2)}
 #' @seealso perm.lm, perm.lmer
 #' @export
