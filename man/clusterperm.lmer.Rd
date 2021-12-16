@@ -11,7 +11,7 @@ clusterperm.lmer(
   weights = NULL,
   offset = NULL,
   series.var = ~0,
-  buildmerControl = list(direction = "order", crit = "LRT", quiet = TRUE, ddf = "lme4"),
+  buildmerControl = list(direction = "order", crit = "LRT", quiet = TRUE),
   nperm = 1000,
   type = "regression",
   parallel = FALSE,
