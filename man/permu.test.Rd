@@ -3,7 +3,7 @@
 \name{permu.test}
 \alias{permu.test}
 \title{Permutation tests for time series data, based on classic linear regression or ANOVA
-This is a legacy function that is primarily provided for backward compatibility. You should probably use \code{permutelm} or \code{permutelmer} instead.
+This is a legacy function that is primarily provided for backward compatibility. You should probably use \code{perm.lm} or \code{perm.lmer} instead.
 \code{permu.test} is the only function to support multivariate responses, although multivariate data can trivially be recoded into a univariate model.
 \code{permu.test} does not support random effects or corrected p-values (e.g. the cluster mass test), which are supported by \code{permutelm}.}
 \usage{
@@ -37,7 +37,7 @@ A data frame.
 }
 \description{
 Permutation tests for time series data, based on classic linear regression or ANOVA
-This is a legacy function that is primarily provided for backward compatibility. You should probably use \code{permutelm} or \code{permutelmer} instead.
+This is a legacy function that is primarily provided for backward compatibility. You should probably use \code{perm.lm} or \code{perm.lmer} instead.
 \code{permu.test} is the only function to support multivariate responses, although multivariate data can trivially be recoded into a univariate model.
 \code{permu.test} does not support random effects or corrected p-values (e.g. the cluster mass test), which are supported by \code{permutelm}.
 }
