@@ -1,6 +1,6 @@
 Package: permutes
 Title: Permutation Tests for Time Series Data
-Version: 2.4
+Version: 2.5
 Authors@R: person(c("Cesko", "C."), "Voeten", email = "cvoeten@gmail.com", role = c("aut", "cre"))
 Author: Cesko C. Voeten [aut, cre]
 Maintainer: Cesko C. Voeten <cvoeten@gmail.com>
@@ -11,7 +11,7 @@ Description: Helps you determine the analysis window to use when analyzing dense
     types of heatmap for reporting. Mixed-effects models are supported using an implementation of
     the approach by Lee & Braun (2012) <doi:10.1111/j.1541-0420.2011.01675.x>.
 Depends: R (>= 2.10)
-Imports: plyr
+Imports: plyr, stats, utils
 Suggests: buildmer (>= 2.3), car, doParallel, ggplot2, glmmTMB, knitr,
         lme4, lmPerm, permuco, rmarkdown, viridis
 License: FreeBSD
@@ -21,6 +21,6 @@ RoxygenNote: 7.2.0
 BugReports: https://github.com/cvoeten/permutes/issues
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2022-05-20 08:23:52 UTC; Cesko
+Packaged: 2022-06-14 11:50:49 UTC; Cesko
 Repository: CRAN
-Date/Publication: 2022-05-20 12:00:02 UTC
+Date/Publication: 2022-06-15 08:20:05 UTC
