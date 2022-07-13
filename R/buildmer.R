@@ -289,10 +289,10 @@ fit.buildmer <- function (t,buildmer,formula,data,family,timepoints,buildmerCont
 		} else {
 			perms <- lapply(1:nperm,function (i) try({
 				s <- sample(seq_along(e))
-				data$y <- data$y[s]
-				data$.weights <- data$.weights[s]
-				m1 <- fit(y ~ 0+X,data)
-				m0 <- fit(y ~ 0,data)
+				data$perm_y <- data$perm_y[s]
+				data$perm_weights <- data$perm_weights[s]
+				m1 <- fit(perm_y ~ 0+perm_X,data)
+				m0 <- fit(perm_y ~ 0,data)
 				as.numeric(2*(stats::logLik(m1)-stats::logLik(m0)))
 			},silent=TRUE))
 			bad <- sapply(perms,inherits,'try-error')
