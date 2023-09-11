@@ -24,7 +24,7 @@
 #' }
 #' @importFrom stats gaussian
 #' @export
-clusterperm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NULL,series.var=~0,buildmerControl=list(direction='order',crit='LRT',quiet=TRUE),nperm=1000,type='regression',parallel=FALSE,progress='none') {
+clusterperm.lmer <- function (formula,data=NULL,family=gaussian(),weights=NULL,offset=NULL,series.var=~0,buildmerControl=list(direction='order',crit='LRT',quiet=TRUE,ddf='lme4'),nperm=1000,type='regression',parallel=FALSE,progress='none') {
 	return(clusterperm.work(buildmer::buildmer,formula,data,family,weights,offset,series.var,buildmerControl,nperm,type,parallel,progress))
 }
 
@@ -71,16 +71,22 @@ clusterperm.work <- function (buildmer,formula,data,family,weights,offset,series
 	if (all(is.null(offset))) {
 		offset <- rep(0,length(data[[dep]]))
 	}
-	ix <- !is.na(data[[dep]]) & !is.na(weights) & !is.na(offset)
-	data <- data[ix,]
-	if ('.weights' %in% names(data)) {
-		stop("Please remove/rename the column named '.weights' from your data; this column name is used internally by permutes")
+	if (is.null(data)) {
+		y <- get(dep)
+		x <- rep(0,length(y))
+		data <- data.frame(.weights=x+1,.offset=x)
+	} else {
+		ix <- !is.finite(data[[dep]]) & !is.finite(weights) & !is.finite(offset)
+		data <- data[ix,]
+		if ('.weights' %in% names(data)) {
+			stop("Please remove/rename the column named '.weights' from your data; this column name is used internally by permutes")
+		}
+		if ('.offset' %in% names(data)) {
+			stop("Please remove/rename the column named '.offset' from your data; this column name is used internally by permutes")
+		}
+		data$.weights <- weights[ix]
+		data$.offset <- offset[ix]
 	}
-	if ('.offset' %in% names(data)) {
-		stop("Please remove/rename the column named '.offset' from your data; this column name is used internally by permutes")
-	}
-	data$.weights <- weights[ix]
-	data$.offset <- offset[ix]
 	if (!inherits(series.var,'formula')) {
 		series.var <- stats::reformulate(series.var)
 	}
@@ -145,7 +151,7 @@ clusterperm.work <- function (buildmer,formula,data,family,weights,offset,series
 		names(perms[[i]]) <- terms[[i]]
 	}
 
-	df$p <- df$cluster_mass <- df$cluster <- NA
+	df$p <- df$cluster_mass <- df$cluster <- rep(NA,nrow(df))
 	# We need to invert the double-nested list from perm$time$factor to perm$factor$time
 	for (x in unique(df$Factor)) {
 		this.factor <- lapply(perms,`[[`,x) #all timepoints for this one factor
@@ -164,7 +170,7 @@ clusterperm.work <- function (buildmer,formula,data,family,weights,offset,series
 		df[df$Factor == x,c('p','cluster_mass','p.cluster_mass','cluster')] <- c(p,stat)
 	}
 
-	if (has.series) {
+	if (has.series && nrow(df)) {
 		df <- cbind(df[,1],Measure=as.character(dep),df[,-1])
 		colnames(df)[1] <- series.var
 	} else {
@@ -175,7 +181,7 @@ clusterperm.work <- function (buildmer,formula,data,family,weights,offset,series
 	return(df)
 }
 
-fit.buildmer <- function (t,buildmer,formula,data,family,timepoints,buildmerControl,nperm,type,verbose) {
+fit.buildmer <- function (t,fun,formula,data,family,timepoints,buildmerControl,nperm,type,verbose) {
 	buildmerControl$direction <- 'order'
 	if (is.null(buildmerControl$quiet)) {
 		buildmerControl$quiet <- TRUE
@@ -229,7 +235,13 @@ fit.buildmer <- function (t,buildmer,formula,data,family,timepoints,buildmerCont
 
 	.weights <- data$.weights; .offset <- data$.offset #silence R CMD check warning
 	buildmerControl$args <- c(buildmerControl$args,list(weights=.weights,offset=.offset))
-	bm <- buildmer(formula=formula,data=data,family=family,buildmerControl=buildmerControl)
+	bm <- fun(formula=formula,data=data,family=family,buildmerControl=buildmerControl)
+	# Apparently, on M1 systems, *something* can go wrong here (discovered by CRAN testing). In that case, return an empty model to avoid crashing in the logic aggregating the results
+	if (inherits(try(model <- bm@model),'try-error')) {
+		warning('Error fitting model:',bm)
+		df <- data.frame(Factor=character(0),df=numeric(0),LRT=numeric(0),F=numeric(0))
+		return(list(terms=character(0),perms=list(),df=numeric(0)))
+	}
 
 	perms <- lapply(1:length(new.names),function (i) {
 		if (verbose) {
@@ -253,22 +265,22 @@ fit.buildmer <- function (t,buildmer,formula,data,family,timepoints,buildmerCont
 		# 1. Get the marginal errors based on quantities from the alternative model
 		# These are y - XB - Zu, with the effect of interest *removed* from X
 		# It's easier for us to just take the residuals and add this effect back in
-		if (inherits(bm@model,'glmmTMB')) {
-			X <- lme4::getME(bm@model,'X')
-			B <- lme4::fixef(bm@model)$cond
-		} else if (inherits(bm@model,'merMod')) {
-			X <- lme4::getME(bm@model,'X')
-			B <- lme4::fixef(bm@model)
+		if (inherits(model,'glmmTMB')) {
+			X <- lme4::getME(model,'X')
+			B <- lme4::fixef(model)$cond
+		} else if (inherits(model,'merMod')) {
+			X <- lme4::getME(model,'X')
+			B <- lme4::fixef(model)
 		} else {
-			X <- stats::model.matrix(formula(bm@model),data)
-			B <- stats::coef(bm@model)
+			X <- stats::model.matrix(formula(model),data)
+			B <- stats::coef(model)
 		}
 		keep <- colnames(X) == new.names[i]
 		X[,!keep] <- 0 #must modify X rather than B because X will be used as predictors in the permuted models
 		if (any(wh <- !is.finite(B))) { #rank-deficiency in lm
 			X[,wh] <- 0
 		}
-		e <- as.vector(stats::resid(bm@model) + X %*% B)
+		e <- as.vector(stats::resid(model) + X %*% B)
 		e <- family$linkinv(e)
 
 		# 2/3. Random effects have already been partialed out, so these are independent and exchangeable
@@ -276,7 +288,7 @@ fit.buildmer <- function (t,buildmer,formula,data,family,timepoints,buildmerCont
 		# The offset has been partialed out already, so will be ignored
 		fit <- function (formula,data) {
 			perm_weights <- data$.weights #silence R CMD check warning
-			suppressWarnings(buildmer(formula,data,family=family,buildmerControl=list(REML=FALSE,quiet=TRUE,direction=NULL,calc.summary=FALSE,calc.anova=FALSE,args=list(weights=perm_weights))))@model
+			suppressWarnings(fun(formula,data,family=family,buildmerControl=list(REML=FALSE,quiet=TRUE,direction=NULL,calc.summary=FALSE,calc.anova=FALSE,args=list(weights=perm_weights))))@model
 		}
 		data <- list(
 			perm_y = e,
@@ -318,18 +330,18 @@ fit.buildmer <- function (t,buildmer,formula,data,family,timepoints,buildmerCont
 	LRT <- sapply(perms,`[[`,'LRT')
 	names(LRT) <- new.names
 
-	scale.est <- !family(bm@model)$family %in% c('binomial','poisson')
-	is.mer <- inherits(bm@model,'merMod')
+	scale.est <- !family(model)$family %in% c('binomial','poisson')
+	is.mer <- inherits(model,'merMod')
 	if (type == 'regression') {
-		if (inherits(bm@model,'glmmTMB')) {
-			beta <- lme4::fixef(bm@model)$cond
-			vcov <- stats::vcov(bm@model)$cond
+		if (inherits(model,'glmmTMB')) {
+			beta <- lme4::fixef(model)$cond
+			vcov <- stats::vcov(model)$cond
 		} else {
-			beta <- (if (inherits(bm@model,'merMod')) lme4::fixef else stats::coef)(bm@model)
-			vcov <- stats::vcov(bm@model)
+			beta <- (if (inherits(model,'merMod')) lme4::fixef else stats::coef)(model)
+			vcov <- stats::vcov(model)
 		}
 		vcov  <- vcov[new.names,new.names]
-		se    <- sqrt(diag(as.matrix(vcov))) #as.matrix needed to work around 'Error in diag(vcov(bm@model)) : long vectors not supported yet: array.c:2186'
+		se    <- sqrt(diag(as.matrix(vcov))) #as.matrix needed to work around 'Error in diag(vcov(model)) : long vectors not supported yet: array.c:2186'
 		LRT   <- LRT[new.names]
 		beta  <- beta[new.names]
 		se    <- se[new.names]
@@ -337,15 +349,15 @@ fit.buildmer <- function (t,buildmer,formula,data,family,timepoints,buildmerCont
 		colnames(df)[4] <- if (scale.est) 't' else 'z'
 		list(terms=old.names,perms=perms,df=df)
 	} else {
-		if (inherits(bm@model,'gam')) {
-			anovatab <- stats::anova(bm@model) #is Type III
+		if (inherits(model,'gam')) {
+			anovatab <- stats::anova(model) #is Type III
 			Fvals <- anovatab$pTerms.chi.sq / anovatab$pTerms.df
 			Fname <- 'F'
 			df <- anovatab$pTerms.df
 			names(df) <- names(Fvals) <- rownames(anovatab$pTerms.table)
 		} else {
 			if (is.mer) {
-				anovatab <- car::Anova(bm@model,type=3,test='Chisq')
+				anovatab <- car::Anova(model,type=3,test='Chisq')
 				if (scale.est) {
 					Fvals <- anovatab$Chisq / anovatab$Df
 					Fname <- 'F'
@@ -355,11 +367,11 @@ fit.buildmer <- function (t,buildmer,formula,data,family,timepoints,buildmerCont
 				}
 			} else {
 				if (scale.est) {
-					anovatab <- car::Anova(bm@model,type=3,test='F')
+					anovatab <- car::Anova(model,type=3,test='F')
 					Fvals <- anovatab$F
 					Fname <- 'F'
 				} else {
-					anovatab <- car::Anova(bm@model,type=3,test='Wald')
+					anovatab <- car::Anova(model,type=3,test='Wald')
 					Fvals <- anovatab$Chisq
 					Fname <- 'Chisq'
 				}

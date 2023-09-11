@@ -41,7 +41,7 @@ library(buildmer)
 data <- MMN[MMN$Time > 151 & MMN$Time < 275,]
 data <- aggregate(Fz ~ Deviant + Session + Subject,data,mean)
 lmm <- buildmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data,
-                buildmerControl=list(direction='order'))
+                buildmerControl=list(direction='order',ddf='lme4'))
 
 ## ----plmer--------------------------------------------------------------------
 perm <- perm.lmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data)

@@ -1,7 +1,7 @@
 ---
 title: "Analyzing time series data using `clusterperm.lmer`"
 author: "Cesko C.\ Voeten"
-date: "14 September 2021"
+date: "12 September 2022"
 bibliography: bibliography.bib
 csl: apa.csl
 output: pdf_document
@@ -101,8 +101,9 @@ library(buildmer)
 data <- MMN[MMN$Time > 151 & MMN$Time < 275,]
 data <- aggregate(Fz ~ Deviant + Session + Subject,data,mean)
 lmm <- buildmer(Fz ~ Deviant * Session + (Deviant + Session | Subject),data,
-                buildmerControl=list(direction='order'))
+                buildmerControl=list(direction='order',ddf='lme4'))
 ```
+where the control argument `direction` specifies that we want to `order` the model terms to obtain the maximal feasible model. In `buildmer`, the default is `c('order','backward')`, which will also perform backward stepwise elimination. `permutes` by default modifies this to use `order` only, however, if you specify an explicit `buildmerControl` argument, all defaults specified by `permutes` will be overridden. We hence need to explicitly specify that we only want the term-ordering step, and that we do not also want backward stepwise elimination. The `ddf='lme4'`, also a default set by `permutes` that deviates from those in `buildmer`, saves a little computation time by not coercing the model to an `lmerTest` model, from which denominator degrees of freedom can be computed. Since we are doing permutation tests, we don't need to calculate any degrees of freedom.
 
 From the above, we observe that the highest random-effects structure that this model could support was `(1 + Deviant | Subject)`. Given that the data only contain 95 observations---due to Jager's averaging over items---this is not surprising. Keeping this in mind, we can use function `perm.lmer` to obtain the corresponding permutation $p$-values:
 

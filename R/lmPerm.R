@@ -77,7 +77,15 @@ permu.test <- function (formula,data,subset=NULL,type='anova',parallel=FALSE,pro
 	}
 	ret <- plyr::adply(sort(unique(timepoints)),1,wrap,fun,formula,data,timepoints,dots,.id=timepoint.var,.parallel=parallel,.progress=ifelse(parallel,'none',progress))
 	if (is.null(ret$Measure)) {
-		ret <- cbind(ret[,1],Measure=as.character(formula[[2]]),ret[,-1])
+		measure <- as.character(formula[[2]])
+		# This can happen in one of two ways:
+		#  - univariate outcome: no problem
+		#  - multivariate outcome, but all models had failed:
+		if (length(measure) != 1) {
+			measure <- NA
+		}
+		measure <- rep(measure,nrow(ret))
+		ret <- cbind(ret[,1],Measure=measure,ret[,-1])
 		colnames(ret)[1] <- timepoint.var
 	}
 	ret$Measure <- sub(' ?Response +','',ret$Measure)

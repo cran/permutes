@@ -1,6 +1,6 @@
 Package: permutes
 Title: Permutation Tests for Time Series Data
-Version: 2.6
+Version: 2.7
 Authors@R: person(c("Cesko", "C."), "Voeten", email = "cvoeten@gmail.com", role = c("aut", "cre"))
 Author: Cesko C. Voeten [aut, cre]
 Maintainer: Cesko C. Voeten <cvoeten@gmail.com>
@@ -17,10 +17,10 @@ Suggests: buildmer (>= 2.3), car, doParallel, ggplot2, glmmTMB, knitr,
 License: FreeBSD
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.0
-BugReports: https://github.com/cvoeten/permutes/issues
+RoxygenNote: 7.2.1
+BugReports: https://gitlab.com/cvoeten/permutes/-/issues
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2022-07-13 06:44:26 UTC; cesko
+Packaged: 2023-09-11 12:41:23 UTC; cesko
 Repository: CRAN
-Date/Publication: 2022-07-13 12:40:02 UTC
+Date/Publication: 2023-09-11 22:40:02 UTC
