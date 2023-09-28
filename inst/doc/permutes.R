@@ -51,5 +51,5 @@ data <- aggregate(amplitude ~ Deviant + Session + Subject,data,mean)
 model <- perm.lmer(amplitude ~ Deviant * Session + (Deviant + Session | Subject),data)
 
 ## ----summary------------------------------------------------------------------
-print(summary(model))
+print(model)
 

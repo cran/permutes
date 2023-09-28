@@ -1,6 +1,6 @@
-ec50c13c3301d3d5821cfe7b1b1dd4b6 *DESCRIPTION
+6e25aa8d922202e060fa0336b2824038 *DESCRIPTION
 33c1d95334afebeb2e7565df967ada20 *NAMESPACE
-4980c7824c66fbc8cffee41e937e16b8 *R/buildmer.R
+b0d4d304cf8486e9dc179878654d5e8f *R/buildmer.R
 91f8331833b81da3b79a0191d4aabd5b *R/data.R
 018860cf6149a4fc95dbb409d8fd2d71 *R/discoverability.R
 3825c42368ce0c3bcfea3fc2cd64fa42 *R/lmPerm.R
@@ -10,10 +10,10 @@ c2ed4f20a26627dbabbb12b5ada8bc9e *R/pkgcheck.R
 4e75d200c95530555debe4a5a4d69401 *data/MMN.RData
 48158704e973d17fccbffab71fa5b3a1 *inst/doc/buildmer.R
 2760640e550ff2de4f30245fc7bbd2b1 *inst/doc/buildmer.Rmd
-2ceaadc6c4be04be9a5eb6ee0c3ced77 *inst/doc/buildmer.pdf
-aebfc8231dbe44ca38eefabd1de221ef *inst/doc/permutes.R
-4670a16b6802cbc46a96d2bcd797aa15 *inst/doc/permutes.Rmd
-da9c01f0899f3dee2e7a98923bbc5605 *inst/doc/permutes.pdf
+beac5ad2762aae1328b5f59869cb1b53 *inst/doc/buildmer.pdf
+254c8ff14849f416f49b1d73a5f80e6a *inst/doc/permutes.R
+550059b65159c32ae9766cdb6a88da20 *inst/doc/permutes.Rmd
+fd2bb19576db3baa8435299b50128829 *inst/doc/permutes.pdf
 ec1fb9c9d72dab0c7e49c99bc569aecc *man/MMN.Rd
 a97ea7fad7eae560dfba06a3ef5c4c5f *man/clusterperm.glm.Rd
 83b11a06e05c682590e020b0c8360b51 *man/clusterperm.glmer.Rd
@@ -30,4 +30,4 @@ bb08c06b79b74cf94dd541cbaad01cb7 *man/perm.lm.Rd
 4053e1a1f9163c1898e1d54f7dcc3add *vignettes/apa.csl
 37a7b8baa626206c2971a321a0b0f03a *vignettes/bibliography.bib
 2760640e550ff2de4f30245fc7bbd2b1 *vignettes/buildmer.Rmd
-4670a16b6802cbc46a96d2bcd797aa15 *vignettes/permutes.Rmd
+550059b65159c32ae9766cdb6a88da20 *vignettes/permutes.Rmd

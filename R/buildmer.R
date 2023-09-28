@@ -76,7 +76,7 @@ clusterperm.work <- function (buildmer,formula,data,family,weights,offset,series
 		x <- rep(0,length(y))
 		data <- data.frame(.weights=x+1,.offset=x)
 	} else {
-		ix <- !is.finite(data[[dep]]) & !is.finite(weights) & !is.finite(offset)
+		ix <- is.finite(data[[dep]]) & is.finite(weights) & is.finite(offset)
 		data <- data[ix,]
 		if ('.weights' %in% names(data)) {
 			stop("Please remove/rename the column named '.weights' from your data; this column name is used internally by permutes")

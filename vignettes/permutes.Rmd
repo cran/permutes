@@ -1,7 +1,7 @@
 ---
 title: "Analyzing time series data using `permu.test`"
 author: "Cesko C.\ Voeten"
-date: "14 September 2021"
+date: "13 September 2023"
 bibliography: bibliography.bib
 csl: apa.csl
 output: pdf_document
@@ -69,7 +69,7 @@ We can then plot the results:
 plot(perms)
 ```
 
-Following @marisoostenveld, the `plot` method from `permutes` by default plots $F$-values. @marisoostenveld then compute a cluster statistic over a range of temporally and/or spatially adjacent $F$-values that all match an inclusion criterion (e.g.\ $p<.05$). This cluster statistic is not explicitly calculated by `permu.test` (in the general case, `permu.test` does not know which responses in any multivariate design should be considered adjacent), but the clusters can be identified by the researcher based on their own cut-off criteria, and the researcher can then run any test they want on the subset of data falling within the cluster. If we want to stick to @marisoostenveld, this test should be another permutation ANOVA over the whole window, but we will see below that generalized additive models offer a much better option than ANOVA, by virtue of being able to take into account the temporal and spatial correlations present in the data.
+Following @marisoostenveld, the `plot` method from `permutes` by default plots $F$-values. @marisoostenveld then compute a cluster statistic over a range of temporally and/or spatially adjacent $F$-values that all match an inclusion criterion (e.g.\ $p<.05$). This cluster statistic is not explicitly calculated by `permu.test` (in the general case, `permu.test` does not know which responses in any multivariate design should be considered adjacent), but the clusters can be identified by the researcher based on their own cut-off criteria, and the researcher can then run any test they want on the subset of data falling within the cluster. If we want to stick to @marisoostenveld, this test should be another permutation ANOVA over the whole window.
 
 Based on visual inspection, the plot suggests one windows for the factor 'Deviant', located around 200 ms post-stimulus-onset. This window corresponds nicely to the window in which one usually finds MMN effects. The region of interest can be tentatively estimated as frontal and central (which is good news for @oddball, as this is in line with prior literature on the MMN component), but we would like some verification. One option is to follow @marisoostenveld in discarding those results that have failed to achieve significance; we can then check again for contiguous bands that achieve large effect sizes, and base our ROI on their positions. We can do this using the `sig` option to the `plot` method.
 
@@ -112,7 +112,7 @@ model <- perm.lmer(amplitude ~ Deviant * Session + (Deviant + Session | Subject)
 Finally, we look at the resulting summary:
 
 ```{r summary}
-print(summary(model))
+print(model)
 ```
 
 We first observe that the highest random-effects structure that this model could support was `(1 + Session | Subject)`. Given that the data only contain 81 observations---due to Jager's averaging over items---this is not surprising. The main conclusions to be drawn from these results is that there is a significant mismatch negativity of $-1.65$ microvolts. No evidence is found for a change in this MMN over the two sessions of the experiment.

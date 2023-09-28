@@ -1,6 +1,6 @@
 Package: permutes
 Title: Permutation Tests for Time Series Data
-Version: 2.7
+Version: 2.8
 Authors@R: person(c("Cesko", "C."), "Voeten", email = "cvoeten@gmail.com", role = c("aut", "cre"))
 Author: Cesko C. Voeten [aut, cre]
 Maintainer: Cesko C. Voeten <cvoeten@gmail.com>
@@ -21,6 +21,6 @@ RoxygenNote: 7.2.1
 BugReports: https://gitlab.com/cvoeten/permutes/-/issues
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2023-09-11 12:41:23 UTC; cesko
+Packaged: 2023-09-27 22:40:55 UTC; cesko
 Repository: CRAN
-Date/Publication: 2023-09-11 22:40:02 UTC
+Date/Publication: 2023-09-28 14:00:02 UTC
